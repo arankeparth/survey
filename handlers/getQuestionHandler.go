@@ -9,9 +9,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"encoding/json"
 	"fmt"
+	"log"
 )
 
 func getQuestion(key string) (bson.M, error) {
+	log.Printf("getQuestion called with key: %s", key)
 	filter := bson.M{"key":key}
 	ctx := context.Background()
 	question, err := db.GetDocument(ctx, spec.SurveyDB, spec.QuestionsCollection, filter, false, nil)
@@ -25,6 +27,7 @@ func getQuestion(key string) (bson.M, error) {
 }
 
 func getKeys() ([]bson.M, error) {
+	log.Printf("getKeys called")
 	stage := bson.D{
 		{"$project", bson.D{
 			{"_id", 0},
@@ -43,7 +46,7 @@ func getKeys() ([]bson.M, error) {
 func GetQuestionHandler(w http.ResponseWriter, r *http.Request) {
 	// Read all documents
 	w.Header().Add("Content-Type", "application/json")
-	
+	log.Printf("GetQuestionHandler called")
 	userId := r.PathValue("userID")
 	objId, err:= primitive.ObjectIDFromHex(userId)
 	
