@@ -9,13 +9,14 @@ import (
 	"survey-service/config"
 	"survey-service/routes"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func main() {
 
 	app := fiber.New(fiber.Config{
-		Immutable: true,
+		ReduceMemoryUsage: true,
+		Immutable:         true,
 	})
 
 	ctx := context.Background()

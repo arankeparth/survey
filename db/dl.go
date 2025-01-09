@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"survey-service/config"
-	"survey-service/spec"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,6 +16,12 @@ type DL struct {
 	UserCollection     *mongo.Collection
 	QuestionCollection *mongo.Collection
 }
+
+const (
+	SurveyDB            = "survey"
+	UsersCollection     = "users"
+	QuestionsCollection = "questions"
+)
 
 // NewDL creates a new DL object and connects to the MongoDB server.
 func NewDL(ctx context.Context) (*DL, error) {
@@ -32,8 +37,8 @@ func NewDL(ctx context.Context) (*DL, error) {
 		return nil, err
 	}
 
-	userCollection := client.Database(spec.SurveyDB).Collection(spec.UsersCollection)
-	questionCollection := client.Database(spec.SurveyDB).Collection(spec.QuestionsCollection)
+	userCollection := client.Database(SurveyDB).Collection(UsersCollection)
+	questionCollection := client.Database(SurveyDB).Collection(QuestionsCollection)
 
 	// Set a context with a timeout for connecting
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

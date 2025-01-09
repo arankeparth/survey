@@ -6,7 +6,7 @@ import (
 	"survey-service/handlers"
 	"survey-service/spec"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func SetRoutes(ctx context.Context, app *fiber.App) error {
@@ -18,5 +18,6 @@ func SetRoutes(ctx context.Context, app *fiber.App) error {
 
 	app.Get(spec.GetQuestionPath, bl.GetQuestionHandler)
 	app.Post(spec.SubmitResponsePath, bl.SubmitResponseHandler)
+
 	return nil
 }
