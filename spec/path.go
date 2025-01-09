@@ -1,6 +1,6 @@
 package spec
 
 const (
-	GetQuestionPath = "/getQuestion/{userID}"
+	GetQuestionPath    = "/getQuestion/{userID}"
 	SubmitResponsePath = "/submitResponse"
 )

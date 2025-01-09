@@ -11,28 +11,32 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"survey-service/spec"
+	"survey-service/config"
 )
 
-var client *mongo.Client
 
-var userCollection *mongo.Collection
+type DL struct {
+	Client *mongo.Client
+	UserCollection *mongo.Collection
+	QuestionCollection *mongo.Collection
+}
 
-var questionCollection *mongo.Collection
 
-// ConnectToDb establishes a connection to the MongoDB server.
-func ConnectToDb(ctx context.Context) (*mongo.Client, error) {
-
+// NewDL creates a new DL object and connects to the MongoDB server.
+func NewDL(ctx context.Context) (*DL, error) {
 	// Step 2: Retrieve specific environment variables
-	mongoURI := "mongodb://mongodb:27017"
+	mongoURI := config.DBHost
+	fmt.Println(mongoURI)
 	// Create a new client and connect to the server
+
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 		return nil, err
 	}
 
-	userCollection = client.Database(spec.SurveyDB).Collection(spec.UsersCollection)
-	questionCollection = client.Database(spec.SurveyDB).Collection(spec.QuestionsCollection)
+	userCollection := client.Database(spec.SurveyDB).Collection(spec.UsersCollection)
+	questionCollection := client.Database(spec.SurveyDB).Collection(spec.QuestionsCollection)
 
 	// Set a context with a timeout for connecting
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -45,25 +49,21 @@ func ConnectToDb(ctx context.Context) (*mongo.Client, error) {
 	}
 
 	log.Printf("MongoDB connected successfully!")
-	return client, nil
-}
-
-// InitializeDatabase initializes the MongoDB client.
-func InitializeDatabase(ctx context.Context) {
-	var err error
-	client, err = ConnectToDb(ctx)
-	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
-	}
+	
+	return &DL{
+		Client: client,
+		UserCollection: userCollection,
+		QuestionCollection: questionCollection,
+	}, nil
 }
 
 // CreateDocument inserts a new document into the specified collection.
-func CreateDocument(ctx context.Context, database string, collection string, document interface{}) (*mongo.InsertOneResult, error) {
+func(dl *DL) CreateDocument(ctx context.Context, database string, collection string, document interface{}) (*mongo.InsertOneResult, error) {
 	var coll *mongo.Collection
 	if collection == spec.UsersCollection {
-		coll = userCollection
+		coll = dl.UserCollection
 	} else if collection == spec.QuestionsCollection {
-		coll = questionCollection
+		coll = dl.QuestionCollection
 	}
 	result, err := coll.InsertOne(ctx, document)
 	if err != nil {
@@ -72,12 +72,13 @@ func CreateDocument(ctx context.Context, database string, collection string, doc
 	return result, nil
 }
 
-func GetDocument(ctx context.Context, database string, collection string, filter bson.M, aggreate bool, stage bson.D) (bson.M, error) {
+// GetDocument retrieves a document from the specified collection.
+func(dl *DL) GetDocument(ctx context.Context, database string, collection string, filter bson.M, aggreate bool, stage bson.D) (bson.M, error) {
 	var coll *mongo.Collection
 	if collection == spec.UsersCollection {
-		coll = userCollection
+		coll = dl.UserCollection
 	} else if collection == spec.QuestionsCollection {
-		coll = questionCollection
+		coll = dl.QuestionCollection
 	}
 	document := coll.FindOne(ctx, filter)
 
@@ -90,12 +91,12 @@ func GetDocument(ctx context.Context, database string, collection string, filter
 }
 
 // ReadDocuments retrieves documents from the specified collection.
-func ReadDocuments(ctx context.Context, database string, collection string, filter bson.M, aggreate bool, stage bson.D) ([]bson.M, error) {
+func(dl *DL) ReadDocuments(ctx context.Context, database string, collection string, filter bson.M, aggreate bool, stage bson.D) ([]bson.M, error) {
 	var coll *mongo.Collection
 	if collection == spec.UsersCollection {
-		coll = userCollection
+		coll = dl.UserCollection
 	} else if collection == spec.QuestionsCollection {
-		coll = questionCollection
+		coll = dl.QuestionCollection
 	}
 	var cursor *mongo.Cursor
 	var err error
@@ -119,12 +120,12 @@ func ReadDocuments(ctx context.Context, database string, collection string, filt
 }
 
 // UpdateDocument updates a document in the specified collection.
-func UpdateDocument(ctx context.Context, database string, collection string, id primitive.ObjectID, update bson.M, operator string) (*mongo.UpdateResult, error) {
+func (dl *DL) UpdateDocument(ctx context.Context, database string, collection string, id primitive.ObjectID, update bson.M, operator string) (*mongo.UpdateResult, error) {
 	var coll *mongo.Collection
 	if collection == spec.UsersCollection {
-		coll = userCollection
+		coll = dl.UserCollection
 	} else if collection == spec.QuestionsCollection {
-		coll = questionCollection
+		coll = dl.QuestionCollection
 	}
 	result, err := coll.UpdateByID(ctx, id, bson.M{operator: update})
 	if err != nil {
@@ -134,12 +135,12 @@ func UpdateDocument(ctx context.Context, database string, collection string, id 
 }
 
 // DeleteDocument deletes a document from the specified collection.
-func DeleteDocument(ctx context.Context, database string, collection string, filter bson.M) (*mongo.DeleteResult, error) {
+func(dl *DL)  DeleteDocument(ctx context.Context, database string, collection string, filter bson.M) (*mongo.DeleteResult, error) {
 	var coll *mongo.Collection
 	if collection == spec.UsersCollection {
-		coll = userCollection
+		coll = dl.UserCollection
 	} else if collection == spec.QuestionsCollection {
-		coll = questionCollection
+		coll = dl.QuestionCollection
 	}
 	result, err := coll.DeleteOne(ctx, filter)
 	if err != nil {

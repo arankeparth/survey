@@ -2,21 +2,20 @@ package handlers
 
 import (
 	"context"
-	"net/http"
-	"survey-service/db"
-	"survey-service/spec"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"encoding/json"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
 	"log"
+	"net/http"
+	"survey-service/spec"
+	"survey-service/decoders"
 )
 
-func getQuestion(key string) (bson.M, error) {
+func (bl *BL)getQuestion(key string) (bson.M, error) {
 	log.Printf("getQuestion called with key: %s", key)
-	filter := bson.M{"key":key}
+	filter := bson.M{"key": key}
 	ctx := context.Background()
-	question, err := db.GetDocument(ctx, spec.SurveyDB, spec.QuestionsCollection, filter, false, nil)
+	question, err := bl.DL.GetDocument(ctx, spec.SurveyDB, spec.QuestionsCollection, filter, false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +25,7 @@ func getQuestion(key string) (bson.M, error) {
 	return question, nil
 }
 
-func getKeys() ([]bson.M, error) {
+func (bl *BL)getKeys() ([]bson.M, error) {
 	log.Printf("getKeys called")
 	stage := bson.D{
 		{"$project", bson.D{
@@ -34,28 +33,26 @@ func getKeys() ([]bson.M, error) {
 			{"key", 1},
 		}},
 	}
-	
+
 	ctx := context.Background()
-	keys, err := db.ReadDocuments(ctx, spec.SurveyDB, spec.QuestionsCollection, nil, true, stage)
+	keys, err :=	bl.DL.ReadDocuments(ctx, spec.SurveyDB, spec.QuestionsCollection, nil, true, stage)
 	if err != nil {
 		return nil, err
 	}
 	return keys, nil
 }
 
-func GetQuestionHandler(w http.ResponseWriter, r *http.Request) {
+func (bl *BL)GetQuestionHandler(w http.ResponseWriter, r *http.Request) {
 	// Read all documents
 	w.Header().Add("Content-Type", "application/json")
 	log.Printf("GetQuestionHandler called")
-	userId := r.PathValue("userID")
-	objId, err:= primitive.ObjectIDFromHex(userId)
-	
+	getQuestionRequest, err := decoders.DecodeGetQuestionRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	ctx := context.Background()
-	user, err := db.GetDocument(ctx, spec.SurveyDB, spec.UsersCollection, bson.M{"_id": objId}, false, nil)
+	user, err := bl.DL.GetDocument(ctx, spec.SurveyDB, spec.UsersCollection, bson.M{"uid": getQuestionRequest.UserID}, false, nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -64,12 +61,12 @@ func GetQuestionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User not found", http.StatusInternalServerError)
 		return
 	}
-	keys, err := getKeys()
+	keys, err := bl.getKeys()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	for _, q := range keys{
+	for _, q := range keys {
 		keyString, ok := q["key"].(string)
 		if !ok {
 			http.Error(w, fmt.Sprintf("The question key should be in the string format, key: %v", q["key"]), http.StatusInternalServerError)
@@ -77,7 +74,7 @@ func GetQuestionHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		_, ok = user[keyString]
 		if !ok {
-			q, err := getQuestion(keyString)
+			q, err := bl.getQuestion(keyString)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -86,14 +83,12 @@ func GetQuestionHandler(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(spec.GetQuestionsResponse{
 				Question: q,
 			})
-			return 
-
+			return
 		}
 	}
-	
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(spec.GetQuestionsResponse{
 		Message: "All Questions Asked",
 	})
 }
-
