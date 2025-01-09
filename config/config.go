@@ -4,7 +4,6 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"os"
-	"fmt"
 )
 
 var (

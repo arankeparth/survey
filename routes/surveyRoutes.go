@@ -1,22 +1,22 @@
 package routes
 
 import (
-	"survey-service/handlers"
-	"net/http"
-	"survey-service/spec"
 	"context"
 	"log"
+	"survey-service/handlers"
+	"survey-service/spec"
+
+	"github.com/gofiber/fiber/v2"
 )
 
-
-func SetRoutes(ctx context.Context) error {
+func SetRoutes(ctx context.Context, app *fiber.App) error {
 	bl, err := handlers.NewBL(ctx)
 	if err != nil {
 		log.Fatalf("Failed to create BL object: %v", err)
 		return err
 	}
-	
-	http.HandleFunc(spec.GetQuestionPath, bl.GetQuestionHandler)
-	http.HandleFunc(spec.SubmitResponsePath, bl.SubmitResponseHandler)
+
+	app.Get(spec.GetQuestionPath, bl.GetQuestionHandler)
+	app.Post(spec.SubmitResponsePath, bl.SubmitResponseHandler)
 	return nil
 }

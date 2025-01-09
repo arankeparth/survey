@@ -1,21 +1,22 @@
 package decoders
 
 import (
+	"log"
 	"survey-service/spec"
-	"net/http"
-	"encoding/json"
+
+	"github.com/gofiber/fiber/v2"
 )
 
-func DecodeGetQuestionRequest(r *http.Request) (*spec.GetQuestionRequest, error) {
-	userId := r.PathValue("userID")
+func DecodeGetQuestionRequest(c *fiber.Ctx) (*spec.GetQuestionRequest, error) {
+	userId := c.Params("userID")
 	return &spec.GetQuestionRequest{UserID: userId}, nil
 }
 
-func DecodeSubmitResponse(r *http.Request) (*spec.SubmitRequest, error) {
-	req_decoder := json.NewDecoder(r.Body)
+func DecodeSubmitResponse(c *fiber.Ctx) (*spec.SubmitRequest, error) {
 	var req spec.SubmitRequest
-	err := req_decoder.Decode(&req)
-	if err != nil {
+
+	if err := c.BodyParser(&req); err != nil {
+		log.Printf("Error parsing request: %v", err.Error())
 		return nil, err
 	}
 	return &req, nil

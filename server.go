@@ -8,13 +8,18 @@ import (
 	_ "net/http/pprof"
 	"survey-service/config"
 	"survey-service/routes"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
+
+	app := fiber.New(fiber.Config{
+		Immutable: true,
+	})
+
 	ctx := context.Background()
-	routes.SetRoutes(ctx)
-	
-	//config.InitializeProcess()
+	routes.SetRoutes(ctx, app)
 
 	go func() {
 		log.Println(fmt.Sprintf("Starting server on port %s", config.PprofPort))
@@ -22,5 +27,5 @@ func main() {
 	}()
 
 	log.Println(fmt.Sprintf("Starting server on port %s", config.Port))
-	log.Fatal(http.ListenAndServe(config.Port, nil))
+	app.Listen(config.Port)
 }
