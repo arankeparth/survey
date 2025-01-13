@@ -3,10 +3,13 @@ package handlers
 import (
 	"context"
 	"survey-service/db"
+
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type BL struct {
-	DL *db.DL
+	DL           *db.DL
+	QuestionKeys []interface{}
 }
 
 func NewBL(ctx context.Context) (*BL, error) {
@@ -14,7 +17,16 @@ func NewBL(ctx context.Context) (*BL, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	filter := bson.M{}
+
+	questionKeys, err := dl.QuestionCollection.Distinct(ctx, "key", filter)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BL{
-		DL: dl,
+		DL:           dl,
+		QuestionKeys: questionKeys,
 	}, nil
 }

@@ -41,16 +41,16 @@ func NewDL(ctx context.Context) (*DL, error) {
 	questionCollection := client.Database(SurveyDB).Collection(QuestionsCollection)
 
 	// Set a context with a timeout for connecting
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	textCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err = client.Ping(ctx, nil)
+	err = client.Ping(textCtx, nil)
 	if err != nil {
 		log.Fatalf("Ping to MongoDB failed: %v", err)
 		return nil, err
 	}
-
 	log.Printf("MongoDB connected successfully!")
+
 
 	return &DL{
 		Client:             client,
