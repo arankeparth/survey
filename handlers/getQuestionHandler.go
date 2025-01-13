@@ -12,17 +12,23 @@ import (
 )
 
 type getQuestionResponse struct {
-	Question interface{} `json:"question"`
-	Message  string      `json:"message"`
+	Question interface{} `json:"question" validate:"required"`
+	Message  string      `json:"message" validate:"required"`
 }
 
-func (bl *BL) GetQuestionHandler(c fiber.Ctx) error {
+func (handler *Handler) GetQuestionHandler(c fiber.Ctx) error {
 	// Read all documents
+
 	userId := c.Params("userID")
+
+	if userId == "" {
+		log.Printf("Error validating get question request: userID is required in the path parameters")
+		return c.Status(http.StatusBadRequest).JSON(spec.ErrorMessage{Message: spec.IMPROPER_REQUEST, Error: spec.USERID_REQUIRED})
+	}
 
 	log.Printf("GetQuestionHandler called with userID: %s", userId)
 
-	user, err := bl.DL.GetDocument(c.Context(), bl.DL.UserCollection, bson.M{"uid": userId}, false, nil)
+	user, err := handler.DataLayer.GetDocument(c.Context(), handler.DataLayer.UserCollection, bson.M{"uid": userId}, false, nil)
 
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.DB_ERROR, Error: err.Error()})
@@ -32,37 +38,41 @@ func (bl *BL) GetQuestionHandler(c fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.USER_ERROR, Error: spec.USER_ERROR})
 	}
 
-	keys, err := bl.getKeys(c.Context())
+	handler.mu.Lock()
 
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.DB_ERROR, Error: err.Error()})
+	if len(handler.QuestionKeys) == 0 {
+		handler.mu.Unlock()
+		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.DB_ERROR, Error: spec.QUESTIONS_ERROR})
 	}
 
-	for _, k := range keys {
+	for _, k := range handler.QuestionKeys {
 		keyString, ok := k.(string)
 		if !ok {
+			handler.mu.Unlock()
 			return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.INTERNAL_SERVER_ERROR, Error: spec.KEY_NOT_STRING_ERROR})
 		}
 		_, ok = user[keyString]
 		if !ok {
-			q, err := bl.getQuestion(c.Context(), keyString)
+			q, err := handler.getQuestion(c.Context(), keyString)
 			if err != nil {
+				handler.mu.Unlock()
 				return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.INTERNAL_SERVER_ERROR, Error: spec.QUESTION_NOT_FOUND_ERROR})
 			}
-
+			handler.mu.Unlock()
 			return c.JSON(getQuestionResponse{Question: q, Message: ""})
 		}
 	}
 
-	return c.Status(http.StatusNoContent).JSON(getQuestionResponse{Question: nil, Message: spec.QUESTIONS_ERROR})
+	handler.mu.Unlock()
+	return c.Status(http.StatusOK).JSON(getQuestionResponse{Question: nil, Message: spec.QUESTIONS_ERROR})
 }
 
-func (bl *BL) getQuestion(ctx context.Context, key string) (bson.M, error) {
+func (handler *Handler) getQuestion(ctx context.Context, key string) (bson.M, error) {
 	log.Printf("getQuestion called with key: %s", key)
 
 	filter := bson.M{"key": key}
 
-	question, err := bl.DL.GetDocument(ctx, bl.DL.QuestionCollection, filter, false, nil)
+	question, err := handler.DataLayer.GetDocument(ctx, handler.DataLayer.QuestionCollection, filter, false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -72,17 +82,4 @@ func (bl *BL) getQuestion(ctx context.Context, key string) (bson.M, error) {
 	}
 
 	return question, nil
-}
-
-func (bl *BL) getKeys(ctx context.Context) ([]interface{}, error) {
-	log.Printf("getKeys called")
-
-	filter := bson.M{}
-
-	resp, err := bl.DL.QuestionCollection.Distinct(ctx, "key", filter)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
 }
