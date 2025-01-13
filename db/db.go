@@ -10,7 +10,7 @@ import (
 )
 
 // CreateDocument inserts a new document into the specified collection.
-func (dl *DL) CreateDocument(ctx context.Context, collection *mongo.Collection, document interface{}) (*mongo.InsertOneResult, error) {
+func (dl *DataLayer) CreateDocument(ctx context.Context, collection *mongo.Collection, document interface{}) (*mongo.InsertOneResult, error) {
 	result, err := collection.InsertOne(ctx, document)
 	if err != nil {
 		log.Printf("Error inserting document: %v", err.Error())
@@ -20,7 +20,7 @@ func (dl *DL) CreateDocument(ctx context.Context, collection *mongo.Collection, 
 }
 
 // GetDocument retrieves a document from the specified collection.
-func (dl *DL) GetDocument(ctx context.Context, collection *mongo.Collection, filter bson.M, aggreate bool, stage bson.D) (bson.M, error) {
+func (dl *DataLayer) GetDocument(ctx context.Context, collection *mongo.Collection, filter bson.M, aggreate bool, stage bson.D) (bson.M, error) {
 	document := collection.FindOne(ctx, filter)
 	var result bson.M
 	if err := document.Decode(&result); err != nil {
@@ -32,7 +32,7 @@ func (dl *DL) GetDocument(ctx context.Context, collection *mongo.Collection, fil
 }
 
 // UpdateDocument updates a document in the specified collection.
-func (dl *DL) UpdateDocument(ctx context.Context, collection *mongo.Collection, filter bson.M, update bson.M, operator string) (*mongo.UpdateResult, error) {
+func (dl *DataLayer) UpdateDocument(ctx context.Context, collection *mongo.Collection, filter bson.M, update bson.M, operator string) (*mongo.UpdateResult, error) {
 	result, err := collection.UpdateOne(ctx, filter, bson.M{operator: update})
 	if err != nil {
 		log.Printf("Error updating document: %v", err.Error())
@@ -42,7 +42,7 @@ func (dl *DL) UpdateDocument(ctx context.Context, collection *mongo.Collection, 
 }
 
 // DeleteDocument deletes a document from the specified collection.
-func (dl *DL) DeleteDocument(ctx context.Context, collection *mongo.Collection, filter bson.M) (*mongo.DeleteResult, error) {
+func (dl *DataLayer) DeleteDocument(ctx context.Context, collection *mongo.Collection, filter bson.M) (*mongo.DeleteResult, error) {
 	result, err := collection.DeleteOne(ctx, filter)
 	if err != nil {
 		log.Printf("Error deleting document: %v", err.Error())
