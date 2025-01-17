@@ -38,32 +38,32 @@ func (handler *Handler) GetQuestionHandler(c fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.USER_ERROR, Error: spec.USER_ERROR})
 	}
 
-	handler.mu.Lock()
+	filter := bson.M{}
 
-	if len(handler.QuestionKeys) == 0 {
-		handler.mu.Unlock()
+	questionKeys, err := handler.DataLayer.QuestionCollection.Distinct(c.Context(), "key", filter)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.DB_ERROR, Error: err.Error()})
+	}
+
+	if len(questionKeys) == 0 {
 		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.DB_ERROR, Error: spec.QUESTIONS_ERROR})
 	}
 
-	for _, k := range handler.QuestionKeys {
+	for _, k := range questionKeys {
 		keyString, ok := k.(string)
 		if !ok {
-			handler.mu.Unlock()
 			return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.INTERNAL_SERVER_ERROR, Error: spec.KEY_NOT_STRING_ERROR})
 		}
 		_, ok = user[keyString]
 		if !ok {
 			q, err := handler.getQuestion(c.Context(), keyString)
 			if err != nil {
-				handler.mu.Unlock()
 				return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.INTERNAL_SERVER_ERROR, Error: spec.QUESTION_NOT_FOUND_ERROR})
 			}
-			handler.mu.Unlock()
 			return c.JSON(getQuestionResponse{Question: q, Message: ""})
 		}
 	}
 
-	handler.mu.Unlock()
 	return c.Status(http.StatusOK).JSON(getQuestionResponse{Question: nil, Message: spec.QUESTIONS_ERROR})
 }
 
