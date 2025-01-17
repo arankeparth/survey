@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type submitRequest struct {
@@ -40,7 +40,7 @@ func (handler *Handler) SubmitResponseHandler(c fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(spec.ErrorMessage{Message: spec.IMPROPER_REQUEST, Error: err.Error()})
 	}
 
-	_, err = handler.DataLayer.UpdateDocument(c.Context(), handler.DataLayer.UserCollection, primitive.M{"uid": req.UserID}, primitive.M{req.QuestionKey: req.Response}, "$set")
+	_, err = handler.DataLayer.UpdateDocument(c.Context(), handler.DataLayer.UserCollection, bson.M{"uid": req.UserID}, bson.M{req.QuestionKey: req.Response}, "$set")
 	if err != nil {
 		log.Printf("Error updating user response: %v", err)
 		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.INTERNAL_SERVER_ERROR, Error: err.Error()})

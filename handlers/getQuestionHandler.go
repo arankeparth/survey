@@ -8,7 +8,7 @@ import (
 	"survey-service/spec"
 
 	"github.com/gofiber/fiber/v3"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type getQuestionResponse struct {
@@ -40,9 +40,16 @@ func (handler *Handler) GetQuestionHandler(c fiber.Ctx) error {
 
 	filter := bson.M{}
 
-	questionKeys, err := handler.DataLayer.QuestionCollection.Distinct(c.Context(), "key", filter)
+	resp := handler.DataLayer.QuestionCollection.Distinct(c.Context(), "key", filter)
+	if resp.Err() != nil {
+		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.DB_ERROR, Error: resp.Err().Error()})
+	}
+
+	var questionKeys []interface{}
+	err = resp.Decode(&questionKeys)
+
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.DB_ERROR, Error: err.Error()})
+		return c.Status(http.StatusInternalServerError).JSON(spec.ErrorMessage{Message: spec.INTERNAL_SERVER_ERROR, Error: err.Error()})
 	}
 
 	if len(questionKeys) == 0 {
